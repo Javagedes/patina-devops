@@ -467,23 +467,41 @@ jobs:
       base_sha: ${{ steps.checkout.outputs.commit }}
       status: ${{ steps.compatibility.outputs.compatible == 'false' && 'incompatible' || steps.build.outcome == 'success' && steps.efi-artifact.outcome == 'success' && 'success' || 'failed' }}
     steps:
+      - name: Set Baseline Container Paths
+        shell: bash
+        env:
+          MODE: ${{ needs.preflight.outputs.mode }}
+        run: |
+          {
+            if [ "$MODE" = "patina" ]; then
+              echo "PATINA_REPO=$GITHUB_WORKSPACE"
+              echo "DXE_CORE_QEMU_REPO=$(dirname "$GITHUB_WORKSPACE")/deps/patina-dxe-core-qemu"
+            else
+              echo "PATINA_REPO="
+              echo "DXE_CORE_QEMU_REPO=$GITHUB_WORKSPACE"
+            fi
+            echo "DEPS_DIR=$(dirname "$GITHUB_WORKSPACE")/deps"
+            echo "FW_PATCHER_REPO=$(dirname "$GITHUB_WORKSPACE")/deps/patina-fw-patcher"
+            echo "PATINA_QEMU_REPO=$(dirname "$GITHUB_WORKSPACE")/deps/patina-qemu"
+          } >> "$GITHUB_ENV"
+
       - name: Checkout Target Revision
         id: checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: ${{ github.repository }}
           ref: ${{ inputs.base-ref }}
-          path: ${{ inputs.patina-ref != '' && 'patina' || 'integration' }}
           persist-credentials: false
 
       - name: Checkout Shared QEMU Integration
         if: inputs.patina-ref != ''
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          repository: OpenDevicePartnership/patina-dxe-core-qemu
-          ref: ${{ needs.preflight.outputs.dxe_core_qemu_sha }}
-          path: integration
-          persist-credentials: false
+        shell: bash
+        env:
+          DXE_REF: ${{ needs.preflight.outputs.dxe_core_qemu_sha }}
+        run: |
+          git clone --no-checkout https://github.com/OpenDevicePartnership/patina-dxe-core-qemu.git "$DXE_CORE_QEMU_REPO"
+          git -C "$DXE_CORE_QEMU_REPO" fetch --depth=1 origin "$DXE_REF"
+          git -C "$DXE_CORE_QEMU_REPO" checkout --detach FETCH_HEAD
 
       - name: Check Baseline Compatibility and Toolchain
         id: compatibility
@@ -498,9 +516,10 @@ jobs:
           import tomllib
 
           compatible = True
+          integration_root = pathlib.Path(os.environ["DXE_CORE_QEMU_REPO"])
           if os.environ["MODE"] == "patina":
-              local = tomllib.loads(pathlib.Path("patina/Cargo.toml").read_text(encoding="utf-8"))
-              integration = tomllib.loads(pathlib.Path("integration/Cargo.toml").read_text(encoding="utf-8"))
+              local = tomllib.loads((pathlib.Path(os.environ["PATINA_REPO"]) / "Cargo.toml").read_text(encoding="utf-8"))
+              integration = tomllib.loads((integration_root / "Cargo.toml").read_text(encoding="utf-8"))
               version = local["workspace"]["package"]["version"]
               dependency = integration["dependencies"]["patina"]
               requirement = dependency["version"] if isinstance(dependency, dict) else dependency
@@ -510,7 +529,7 @@ jobs:
               compatible = int(version.split(".")[0]) == int(match[1])
               if not compatible:
                   print(f"::warning::Baseline Patina {version} does not match integration requirement {requirement}.")
-          toolchain = tomllib.loads(pathlib.Path("integration/rust-toolchain.toml").read_text(encoding="utf-8"))
+          toolchain = tomllib.loads((integration_root / "rust-toolchain.toml").read_text(encoding="utf-8"))
           with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as environment:
               environment.write(f'RUSTUP_TOOLCHAIN={toolchain["toolchain"]["channel"]}\n')
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
@@ -520,30 +539,11 @@ jobs:
       - name: Download Baseline Rust Tools
         if: steps.compatibility.outputs.compatible == 'true'
         uses: Javagedes/patina-devops/.github/actions/rust-tool-cache@9338d1417ffd823456eb5cbe6f52feb0cfcabd3d
-        with:
-          rust-toolchain-file: integration/rust-toolchain.toml
 
       - name: Install Baseline UEFI Targets
         if: steps.compatibility.outputs.compatible == 'true'
         shell: bash
         run: rustup target add x86_64-unknown-uefi aarch64-unknown-uefi
-
-      - name: Set Baseline Container Paths
-        shell: bash
-        env:
-          MODE: ${{ needs.preflight.outputs.mode }}
-        run: |
-          {
-            if [ "$MODE" = "patina" ]; then
-              echo "PATINA_REPO=$GITHUB_WORKSPACE/patina"
-            else
-              echo "PATINA_REPO="
-            fi
-            echo "DEPS_DIR=$GITHUB_WORKSPACE/deps"
-            echo "DXE_CORE_QEMU_REPO=$GITHUB_WORKSPACE/integration"
-            echo "FW_PATCHER_REPO=$GITHUB_WORKSPACE/deps/patina-fw-patcher"
-            echo "PATINA_QEMU_REPO=$GITHUB_WORKSPACE/deps/patina-qemu"
-          } >> "$GITHUB_ENV"
 
       - name: Build Baseline DEBUG and RELEASE Q35 and ArmVirt
         id: build
@@ -564,11 +564,11 @@ jobs:
         with:
           name: patina-qemu-efi-base
           path: |
-            integration/target/x86_64-unknown-uefi/debug/qemu_q35_dxe_core.efi
-            integration/target/x86_64-unknown-uefi/release/qemu_q35_dxe_core.efi
-            integration/target/aarch64-unknown-uefi/debug/qemu_armvirt_dxe_core.efi
-            integration/target/aarch64-unknown-uefi/release/qemu_armvirt_dxe_core.efi
-            integration/target/build-metadata.json
+            ${{ env.DXE_CORE_QEMU_REPO }}/target/x86_64-unknown-uefi/debug/qemu_q35_dxe_core.efi
+            ${{ env.DXE_CORE_QEMU_REPO }}/target/x86_64-unknown-uefi/release/qemu_q35_dxe_core.efi
+            ${{ env.DXE_CORE_QEMU_REPO }}/target/aarch64-unknown-uefi/debug/qemu_armvirt_dxe_core.efi
+            ${{ env.DXE_CORE_QEMU_REPO }}/target/aarch64-unknown-uefi/release/qemu_armvirt_dxe_core.efi
+            ${{ env.DXE_CORE_QEMU_REPO }}/target/build-metadata.json
           if-no-files-found: error
           overwrite: true
           retention-days: 7
@@ -578,7 +578,7 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: qemu-baseline-build-log
-          path: deps/baseline-build.log
+          path: ${{ env.DEPS_DIR }}/baseline-build.log
           if-no-files-found: warn
           retention-days: 7
 
