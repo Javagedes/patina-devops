@@ -155,7 +155,10 @@ runs:
             if unpatched:
                 raise SystemExit(f"Workspace crates resolved from a registry instead of local patches: {unpatched}")
         def commit(directory):
-            return subprocess.check_output(["git", "-C", directory, "rev-parse", "HEAD"], text=True).strip()
+            return subprocess.check_output(
+                ["git", "-C", directory, "-c", f"safe.directory={pathlib.Path(directory).resolve().as_posix()}",
+                 "rev-parse", "HEAD"], text=True,
+            ).strip()
 
         metadata = {
             "run_id": int(os.environ["GITHUB_RUN_ID"]),
