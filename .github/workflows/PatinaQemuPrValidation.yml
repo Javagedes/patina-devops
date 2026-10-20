@@ -548,7 +548,7 @@ jobs:
       - name: Build Baseline DEBUG and RELEASE Q35 and ArmVirt
         id: build
         if: steps.compatibility.outputs.compatible == 'true'
-        uses: Javagedes/patina-devops/.github/actions/setup-patina-qemu-validation@9338d1417ffd823456eb5cbe6f52feb0cfcabd3d
+        uses: Javagedes/patina-devops/.github/actions/setup-patina-qemu-validation@ac35657ee64e60c36543eae977dde5fb80b24296
         with:
           patina-repo: ${{ env.PATINA_REPO }}
           deps-dir: ${{ env.DEPS_DIR }}
@@ -706,7 +706,7 @@ jobs:
         run: unzip -o .cache/patina-qemu/${{ matrix.fw_zip }} -d "$FW_DIR"
 
       - name: Setup and Build patina-dxe-core-qemu
-        uses: Javagedes/patina-devops/.github/actions/setup-patina-qemu-validation@9338d1417ffd823456eb5cbe6f52feb0cfcabd3d
+        uses: Javagedes/patina-devops/.github/actions/setup-patina-qemu-validation@ac35657ee64e60c36543eae977dde5fb80b24296
         with:
           deps-dir: ${{ env.DEPS_DIR }}
           dxe-core-qemu-ref: ${{ needs.preflight.outputs.dxe_core_qemu_sha }}
@@ -813,7 +813,7 @@ jobs:
           Expand-Archive -Path .cache\patina-qemu\armvirt.zip -DestinationPath "$env:FW_DIR" -Force
 
       - name: Setup and Build patina-dxe-core-qemu
-        uses: Javagedes/patina-devops/.github/actions/setup-patina-qemu-validation@9338d1417ffd823456eb5cbe6f52feb0cfcabd3d
+        uses: Javagedes/patina-devops/.github/actions/setup-patina-qemu-validation@ac35657ee64e60c36543eae977dde5fb80b24296
         with:
           deps-dir: ${{ env.DEPS_DIR }}
           dxe-core-qemu-ref: ${{ needs.preflight.outputs.dxe_core_qemu_sha }}
