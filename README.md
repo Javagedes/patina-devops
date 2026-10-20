@@ -22,14 +22,34 @@ duplicated in every repo. It provides:
   [Repo File Sync workflow](.github/workflows/FileSyncer.yml), based on the mapping in
   [.sync/Files.yml](.sync/Files.yml).
 
-## PR Build Size
+## QEMU PR Validation and Build Sizes
 
-- [PatinaPrBuildSize.yml](.github/workflows/PatinaPrBuildSize.yml) builds the caller's `base-sha` and `head-sha`
-  with one QEMU integration revision, recording DEBUG and RELEASE EFI sizes for Q35 and ArmVirt.
-- [PatinaPrBuildSizePost.yml](.github/workflows/PatinaPrBuildSizePost.yml) validates the originating CI run and
-  measurements, then creates or updates the caller PR's size comparison comment.
+[PatinaQemuPrValidation.yml](.github/workflows/PatinaQemuPrValidation.yml) optionally accepts `base-ref` in either PR
+mode to enable a linked EFI size comparison. The caller supplies the target branch (for example, `main` or
+`refs/heads/main`); the baseline job checks it out in the selected repository and records its resolved commit SHA.
+Exactly one of `patina-ref` or `dxe-core-qemu-ref` selects the mode and PR revision, which is resolved to an immutable
+commit for all builds. Optional `head-sha` remains available for commit status updates; size comparison does not
+require it. The target branch name is preserved to avoid publishing results after a PR is retargeted.
+Existing callers without `base-ref` retain their existing behavior.
 
-The event callers and CI/PR discovery live in the Patina repository.
+One additional baseline job builds Q35 and ArmVirt in DEBUG and RELEASE with the target branch revision.
+The PR side reuses the Linux validation binaries, uploaded before flashing; it does not compile the PR again.
+In Patina mode, both sides use the same immutable QEMU integration commit and verify local workspace crate patches.
+In integration mode, both sides build their own patina-dxe-core-qemu revision using its published Patina dependencies,
+without checking out or patching Patina.
+Baseline failures are informational and do not change the QEMU validation result.
+Dependency SHA resolution failures remain warnings. If the shared QEMU integration commit cannot be resolved in
+Patina mode, size comparison is skipped and reported as unavailable while ordinary QEMU validation continues.
+
+[PatinaQemuPrValidationPost.yml](.github/workflows/PatinaQemuPrValidationPost.yml) reads the eight EFI files as data,
+checks artifact provenance, and adds a Binary Size Report to the existing QEMU comment alongside timing and
+diagnostic information. The report follows the integration repository's layout: one row per platform, commit links,
+and DEBUG/RELEASE columns with stacked base size, PR size, and a bold signed delta. Sizes use B/KB/MB with
+1,024-byte units and two decimal places. Missing sizes are explicitly unavailable, never zero.
+The existing GitHub App handles comment authentication; write credentials are not exposed to the build jobs.
+
+Run the focused regression tests with `node --test .github/scripts/qemu-pr-build-size.test.cjs`.
+Deploy the shared action and reusable workflows before enabling `base-ref` in downstream callers.
 
 ## Release Process Across Patina Repositories
 

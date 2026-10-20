@@ -127,3 +127,41 @@ runs:
         run_cmd cargo make q35-release -- --exclude-features exit_on_patina_test_failure
         run_cmd cargo make armvirt -- --exclude-features exit_on_patina_test_failure
         run_cmd cargo make armvirt-release -- --exclude-features exit_on_patina_test_failure
+
+    - name: Verify Build Sources and Record Metadata
+      shell: bash
+      env:
+        DXE_CORE_QEMU_REPO: ${{ inputs.dxe-core-qemu-repo }}
+        PATINA_REPO: ${{ inputs.patina-repo }}
+      run: |
+        python - <<'PY'
+        import json
+        import os
+        import pathlib
+        import subprocess
+        import tomllib
+
+        root = pathlib.Path(os.environ["DXE_CORE_QEMU_REPO"])
+        patina_repo = os.environ["PATINA_REPO"]
+        if patina_repo:
+            manifest = tomllib.loads((root / "Cargo.toml").read_text(encoding="utf-8"))
+            patches = manifest["patch"]["crates-io"]
+            for name in ("patina", "patina_dxe_core"):
+                if "path" not in patches[name]:
+                    raise SystemExit(f"Missing local crate patch for {name}")
+            lock = tomllib.loads((root / "Cargo.lock").read_text(encoding="utf-8"))
+            unpatched = [package["name"] for package in lock["package"]
+                         if package["name"] in patches and "source" in package]
+            if unpatched:
+                raise SystemExit(f"Workspace crates resolved from a registry instead of local patches: {unpatched}")
+        def commit(directory):
+            return subprocess.check_output(["git", "-C", directory, "rev-parse", "HEAD"], text=True).strip()
+
+        metadata = {
+            "run_id": int(os.environ["GITHUB_RUN_ID"]),
+            "run_attempt": int(os.environ["GITHUB_RUN_ATTEMPT"]),
+            "patina_sha": commit(patina_repo) if patina_repo else "",
+            "integration_sha": commit(str(root)),
+        }
+        (root / "target" / "build-metadata.json").write_text(json.dumps(metadata), encoding="utf-8")
+        PY
