@@ -481,8 +481,6 @@ jobs:
               echo "DXE_CORE_QEMU_REPO=$GITHUB_WORKSPACE"
             fi
             echo "DEPS_DIR=$(dirname "$GITHUB_WORKSPACE")/deps"
-            echo "FW_PATCHER_REPO=$(dirname "$GITHUB_WORKSPACE")/deps/patina-fw-patcher"
-            echo "PATINA_QEMU_REPO=$(dirname "$GITHUB_WORKSPACE")/deps/patina-qemu"
           } >> "$GITHUB_ENV"
 
       - name: Checkout Target Revision
@@ -503,13 +501,17 @@ jobs:
           git -C "$DXE_CORE_QEMU_REPO" fetch --depth=1 origin "$DXE_REF"
           git -C "$DXE_CORE_QEMU_REPO" checkout --detach FETCH_HEAD
 
+      - name: Setup Python (Baseline)
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ needs.vars.outputs['python-version'] }}
+
       - name: Check Baseline Compatibility and Toolchain
         id: compatibility
-        shell: bash
+        shell: python
         env:
           MODE: ${{ needs.preflight.outputs.mode }}
         run: |
-          python3 - <<'PY'
           import os
           import pathlib
           import re
@@ -534,7 +536,6 @@ jobs:
               environment.write(f'RUSTUP_TOOLCHAIN={toolchain["toolchain"]["channel"]}\n')
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
               output.write(f"compatible={str(compatible).lower()}\n")
-          PY
 
       - name: Download Baseline Rust Tools
         if: steps.compatibility.outputs.compatible == 'true'
@@ -553,8 +554,6 @@ jobs:
           patina-repo: ${{ env.PATINA_REPO }}
           deps-dir: ${{ env.DEPS_DIR }}
           dxe-core-qemu-repo: ${{ env.DXE_CORE_QEMU_REPO }}
-          fw-patcher-repo: ${{ env.FW_PATCHER_REPO }}
-          patina-qemu-repo: ${{ env.PATINA_QEMU_REPO }}
           log-file: ${{ env.DEPS_DIR }}/baseline-build.log
 
       - name: Upload Baseline EFI Binaries
@@ -679,8 +678,9 @@ jobs:
           mkdir -p "$LOG_DIR"
 
       - name: Setup Python (Linux)
-        shell: bash
-        run: python3 --version
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ needs.vars.outputs['python-version'] }}
 
       - name: Download Rust Tools
         uses: Javagedes/patina-devops/.github/actions/rust-tool-cache@9338d1417ffd823456eb5cbe6f52feb0cfcabd3d
