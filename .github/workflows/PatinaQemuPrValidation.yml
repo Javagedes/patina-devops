@@ -662,7 +662,7 @@ jobs:
               echo "DXE_CORE_QEMU_REPO=$GITHUB_WORKSPACE"
             else
               echo "PATINA_REPO=$GITHUB_WORKSPACE"
-              echo "DXE_CORE_QEMU_REPO=$GITHUB_WORKSPACE/../deps/patina-dxe-core-qemu"
+              echo "DXE_CORE_QEMU_REPO=$(dirname "$GITHUB_WORKSPACE")/deps/patina-dxe-core-qemu"
             fi
             echo "DEPS_DIR=$GITHUB_WORKSPACE/../deps"
             echo "FW_PATCHER_REPO=$GITHUB_WORKSPACE/../deps/patina-fw-patcher"
