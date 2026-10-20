@@ -1,5 +1,5 @@
 # A reusable workflow that processes metadata from Patina QEMU PR Validation
-# and posts PR comments using the Patina GitHub app token.
+# and posts PR comments using GITHUB_TOKEN for fork-only testing.
 #
 # Copyright (c) Microsoft Corporation.
 # SPDX-License-Identifier: Apache-2.0
@@ -27,20 +27,14 @@ on:
 permissions:
   contents: read
   actions: read
+  pull-requests: write
+  statuses: write
 
 jobs:
   post-process:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Generate GitHub App Token
-        id: app-token
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
-        with:
-          app-id: ${{ secrets.PATINA_AUTOMATION_APPLICATION_ID }}
-          private-key: ${{ secrets.PATINA_AUTOMATION_APPLICATION_PRIVATE_KEY }}
-          owner: ${{ github.repository_owner }}
-
       - name: Download PR Metadata from Triggering Run
         id: download-metadata
         continue-on-error: true
@@ -48,7 +42,7 @@ jobs:
         with:
           name: patina-qemu-pr-metadata
           path: metadata
-          github-token: ${{ steps.app-token.outputs.token }}
+          github-token: ${{ github.token }}
           run-id: ${{ inputs.triggering-run-id }}
           repository: ${{ github.repository }}
 
@@ -142,7 +136,7 @@ jobs:
         with:
           pattern: patina-qemu-efi-*
           path: binaries
-          github-token: ${{ steps.app-token.outputs.token }}
+          github-token: ${{ github.token }}
           run-id: ${{ inputs.triggering-run-id }}
           repository: ${{ github.repository }}
 
@@ -281,7 +275,7 @@ jobs:
         if: steps.download-metadata.outcome == 'success' && steps.metadata.outputs.skipped != 'true' && steps.metadata.outputs.assets_complete == 'false'
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
-          github-token: ${{ steps.app-token.outputs.token }}
+          github-token: ${{ github.token }}
           script: |
             const hiddenMarker = '<!-- patina-qemu-validation-result -->';
             const workflowName = '${{ github.workflow }}';
@@ -315,7 +309,7 @@ jobs:
         if: steps.download-metadata.outcome == 'success' && steps.metadata.outputs.skipped != 'true' && steps.metadata.outputs.assets_complete != 'false' && steps.metadata.outputs.readiness_mismatch == 'true'
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
-          github-token: ${{ steps.app-token.outputs.token }}
+          github-token: ${{ github.token }}
           script: |
             const hiddenMarker = '<!-- patina-qemu-validation-result -->';
             const workflowName = '${{ github.workflow }}';
@@ -370,13 +364,13 @@ jobs:
         with:
           pattern: qemu-validation-logs-*
           path: logs
-          github-token: ${{ steps.app-token.outputs.token }}
+          github-token: ${{ github.token }}
           run-id: ${{ inputs.triggering-run-id }}
           repository: ${{ github.repository }}
 
       - name: Extract Errors from QEMU Logs
         if: steps.download-metadata.outcome == 'success' && steps.metadata.outputs.skipped != 'true' && steps.metadata.outputs.assets_complete != 'false' && steps.metadata.outputs.validation_failed == 'true' && steps.metadata.outputs.readiness_mismatch != 'true'
-        uses: OpenDevicePartnership/patina-devops/.github/actions/extract-build-errors@main
+        uses: Javagedes/patina-devops/.github/actions/extract-build-errors@9338d1417ffd823456eb5cbe6f52feb0cfcabd3d
         with:
           logs-dir: logs
           output-json: error-map.json
@@ -385,7 +379,7 @@ jobs:
         if: steps.download-metadata.outcome == 'success' && steps.metadata.outputs.skipped != 'true' && steps.metadata.outputs.assets_complete != 'false' && steps.metadata.outputs.validation_failed == 'true' && steps.metadata.outputs.readiness_mismatch != 'true'
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
-          github-token: ${{ steps.app-token.outputs.token }}
+          github-token: ${{ github.token }}
           script: |
             const fs = require('fs');
             const hiddenMarker = '<!-- patina-qemu-validation-result -->';
@@ -581,7 +575,7 @@ jobs:
         continue-on-error: true
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          github-token: ${{ steps.app-token.outputs.token }}
+          github-token: ${{ github.token }}
           path: logs
           pattern: qemu-validation-logs-*
           repository: ${{ github.repository }}
@@ -630,7 +624,7 @@ jobs:
         if: steps.download-metadata.outcome == 'success' && steps.metadata.outputs.skipped != 'true' && steps.metadata.outputs.assets_complete != 'false' && steps.metadata.outputs.validation_failed == 'false' && steps.metadata.outputs.readiness_mismatch != 'true'
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
-          github-token: ${{ steps.app-token.outputs.token }}
+          github-token: ${{ github.token }}
           script: |
             const hiddenMarker = '<!-- patina-qemu-validation-result -->';
             const workflowName = '${{ github.workflow }}';
@@ -685,7 +679,7 @@ jobs:
         if: steps.download-metadata.outcome == 'success' && steps.metadata.outputs.skipped == 'true'
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
-          github-token: ${{ steps.app-token.outputs.token }}
+          github-token: ${{ github.token }}
           script: |
             const hiddenMarker = '<!-- patina-qemu-validation-result -->';
             const workflowName = '${{ github.workflow }}';
@@ -735,7 +729,7 @@ jobs:
         env:
           TRIGGERING_RUN_ID: ${{ inputs.triggering-run-id }}
         with:
-          github-token: ${{ steps.app-token.outputs.token }}
+          github-token: ${{ github.token }}
           script: |
             const fs = require('fs');
             const metadata = JSON.parse(fs.readFileSync('metadata/pr-metadata.json', 'utf8'));
@@ -786,7 +780,7 @@ jobs:
         if: always() && steps.publish.outputs.obsolete != 'true'
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
-          github-token: ${{ steps.app-token.outputs.token }}
+          github-token: ${{ github.token }}
           script: |
             // Prefer head_sha from metadata, but fall back to the workflow input.
             const headSha = '${{ steps.metadata.outputs.head_sha }}' || '${{ inputs.head-sha }}';
