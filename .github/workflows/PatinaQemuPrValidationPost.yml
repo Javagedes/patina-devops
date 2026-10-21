@@ -385,7 +385,7 @@ jobs:
 
       - name: Extract Errors from QEMU Logs
         if: steps.download-metadata.outcome == 'success' && steps.metadata.outputs.skipped != 'true' && steps.metadata.outputs.assets_complete != 'false' && steps.metadata.outputs.validation_failed == 'true' && steps.metadata.outputs.readiness_mismatch != 'true'
-        uses: OpenDevicePartnership/patina-devops/.github/actions/extract-build-errors@main
+        uses: Javagedes/patina-devops/.github/actions/extract-build-errors@44ee888d85f3c5ed8cedde89346fcd1161aec1c1
         with:
           logs-dir: logs
           output-json: error-map.json
