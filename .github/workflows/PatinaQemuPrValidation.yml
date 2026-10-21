@@ -54,10 +54,6 @@ jobs:
   notify-in-progress:
     name: Post In-Progress Notification
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: write
-      statuses: write
     steps:
       - name: Update PR Comment to In-Progress
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
@@ -129,7 +125,7 @@ jobs:
 
   vars:
     name: Get Constants
-    uses: Javagedes/patina-devops/.github/workflows/qemu-constants.yml@9338d1417ffd823456eb5cbe6f52feb0cfcabd3d
+    uses: OpenDevicePartnership/patina-devops/.github/workflows/qemu-constants.yml@main
 
   preflight:
     name: Preflight Checks
@@ -506,7 +502,7 @@ jobs:
         with:
           python-version: ${{ needs.vars.outputs['python-version'] }}
 
-      - name: Check Baseline Compatibility and Toolchain
+      - name: Check Baseline Compatibility
         id: compatibility
         shell: python
         env:
@@ -525,31 +521,19 @@ jobs:
               version = local["workspace"]["package"]["version"]
               dependency = integration["dependencies"]["patina"]
               requirement = dependency["version"] if isinstance(dependency, dict) else dependency
-              match = re.fullmatch(r"\^?(\d+)(?:\.\d+){0,2}", requirement)
+              match = re.search(r"(\d+)", requirement)
               if match is None:
-                  raise SystemExit(f"Unsupported integration version requirement: {requirement}")
+                  raise SystemExit(f"Unable to parse patina dependency major version from: {requirement}")
               compatible = int(version.split(".")[0]) == int(match[1])
               if not compatible:
                   print(f"::warning::Baseline Patina {version} does not match integration requirement {requirement}.")
-          toolchain = tomllib.loads((integration_root / "rust-toolchain.toml").read_text(encoding="utf-8"))
-          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as environment:
-              environment.write(f'RUSTUP_TOOLCHAIN={toolchain["toolchain"]["channel"]}\n')
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
               output.write(f"compatible={str(compatible).lower()}\n")
-
-      - name: Download Baseline Rust Tools
-        if: steps.compatibility.outputs.compatible == 'true'
-        uses: Javagedes/patina-devops/.github/actions/rust-tool-cache@9338d1417ffd823456eb5cbe6f52feb0cfcabd3d
-
-      - name: Install Baseline UEFI Targets
-        if: steps.compatibility.outputs.compatible == 'true'
-        shell: bash
-        run: rustup target add x86_64-unknown-uefi aarch64-unknown-uefi
 
       - name: Build Baseline DEBUG and RELEASE Q35 and ArmVirt
         id: build
         if: steps.compatibility.outputs.compatible == 'true'
-        uses: Javagedes/patina-devops/.github/actions/setup-patina-qemu-validation@e5fcab8ae479872042215411a94fdd6057ae6f65
+        uses: OpenDevicePartnership/patina-devops/.github/actions/setup-patina-qemu-validation@main
         with:
           patina-repo: ${{ env.PATINA_REPO }}
           deps-dir: ${{ env.DEPS_DIR }}
@@ -682,9 +666,6 @@ jobs:
         with:
           python-version: ${{ needs.vars.outputs['python-version'] }}
 
-      - name: Download Rust Tools
-        uses: Javagedes/patina-devops/.github/actions/rust-tool-cache@9338d1417ffd823456eb5cbe6f52feb0cfcabd3d
-
       - name: Check Cache for patina-qemu FW Binary
         id: firmware-cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -706,7 +687,7 @@ jobs:
         run: unzip -o .cache/patina-qemu/${{ matrix.fw_zip }} -d "$FW_DIR"
 
       - name: Setup and Build patina-dxe-core-qemu
-        uses: Javagedes/patina-devops/.github/actions/setup-patina-qemu-validation@e5fcab8ae479872042215411a94fdd6057ae6f65
+        uses: OpenDevicePartnership/patina-devops/.github/actions/setup-patina-qemu-validation@main
         with:
           deps-dir: ${{ env.DEPS_DIR }}
           dxe-core-qemu-ref: ${{ needs.preflight.outputs.dxe_core_qemu_sha }}
@@ -731,7 +712,7 @@ jobs:
           retention-days: 7
 
       - name: Run QEMU Validation - ${{ matrix.platform }} (Linux)
-        uses: Javagedes/patina-devops/.github/actions/run-patina-qemu-validation@9338d1417ffd823456eb5cbe6f52feb0cfcabd3d
+        uses: OpenDevicePartnership/patina-devops/.github/actions/run-patina-qemu-validation@main
         with:
           fw-patch-repo: ${{ env.FW_PATCHER_REPO }}
           log-file: ${{ env.LOG_DIR }}/${{ matrix.log_file }}
@@ -786,9 +767,6 @@ jobs:
         with:
           python-version: ${{ needs.vars.outputs['python-version'] }}
 
-      - name: Download Rust Tools
-        uses: Javagedes/patina-devops/.github/actions/rust-tool-cache@9338d1417ffd823456eb5cbe6f52feb0cfcabd3d
-
       - name: Check Cache for patina-qemu FW Binaries
         id: firmware-cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -813,7 +791,7 @@ jobs:
           Expand-Archive -Path .cache\patina-qemu\armvirt.zip -DestinationPath "$env:FW_DIR" -Force
 
       - name: Setup and Build patina-dxe-core-qemu
-        uses: Javagedes/patina-devops/.github/actions/setup-patina-qemu-validation@e5fcab8ae479872042215411a94fdd6057ae6f65
+        uses: OpenDevicePartnership/patina-devops/.github/actions/setup-patina-qemu-validation@main
         with:
           deps-dir: ${{ env.DEPS_DIR }}
           dxe-core-qemu-ref: ${{ needs.preflight.outputs.dxe_core_qemu_sha }}
@@ -911,7 +889,7 @@ jobs:
       #    - See: https://github.com/OpenDevicePartnership/patina-qemu/issues/188
       - name: Run QEMU Validation - Q35 (Windows)
         if: false
-        uses: Javagedes/patina-devops/.github/actions/run-patina-qemu-validation@9338d1417ffd823456eb5cbe6f52feb0cfcabd3d
+        uses: OpenDevicePartnership/patina-devops/.github/actions/run-patina-qemu-validation@main
         with:
           fw-patch-repo: ${{ env.FW_PATCHER_REPO }}
           log-file: ${{ env.LOG_DIR }}/q35-windows.log
