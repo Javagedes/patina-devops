@@ -54,6 +54,10 @@ jobs:
   notify-in-progress:
     name: Post In-Progress Notification
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      statuses: write
     steps:
       - name: Update PR Comment to In-Progress
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
