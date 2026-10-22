@@ -129,7 +129,7 @@ jobs:
 
   vars:
     name: Get Constants
-    uses: Javagedes/patina-devops/.github/workflows/qemu-constants.yml@44ee888d85f3c5ed8cedde89346fcd1161aec1c1
+    uses: OpenDevicePartnership/patina-devops/.github/workflows/qemu-constants.yml@main
 
   preflight:
     name: Preflight Checks
@@ -537,7 +537,7 @@ jobs:
       - name: Build Baseline DEBUG and RELEASE Q35 and ArmVirt
         id: build
         if: steps.compatibility.outputs.compatible == 'true'
-        uses: Javagedes/patina-devops/.github/actions/setup-patina-qemu-validation@44ee888d85f3c5ed8cedde89346fcd1161aec1c1
+        uses: OpenDevicePartnership/patina-devops/.github/actions/setup-patina-qemu-validation@main
         with:
           patina-repo: ${{ env.PATINA_REPO }}
           deps-dir: ${{ env.DEPS_DIR }}
@@ -691,7 +691,7 @@ jobs:
         run: unzip -o .cache/patina-qemu/${{ matrix.fw_zip }} -d "$FW_DIR"
 
       - name: Setup and Build patina-dxe-core-qemu
-        uses: Javagedes/patina-devops/.github/actions/setup-patina-qemu-validation@44ee888d85f3c5ed8cedde89346fcd1161aec1c1
+        uses: OpenDevicePartnership/patina-devops/.github/actions/setup-patina-qemu-validation@main
         with:
           deps-dir: ${{ env.DEPS_DIR }}
           dxe-core-qemu-ref: ${{ needs.preflight.outputs.dxe_core_qemu_sha }}
@@ -716,7 +716,7 @@ jobs:
           retention-days: 7
 
       - name: Run QEMU Validation - ${{ matrix.platform }} (Linux)
-        uses: Javagedes/patina-devops/.github/actions/run-patina-qemu-validation@44ee888d85f3c5ed8cedde89346fcd1161aec1c1
+        uses: OpenDevicePartnership/patina-devops/.github/actions/run-patina-qemu-validation@main
         with:
           fw-patch-repo: ${{ env.FW_PATCHER_REPO }}
           log-file: ${{ env.LOG_DIR }}/${{ matrix.log_file }}
@@ -795,7 +795,7 @@ jobs:
           Expand-Archive -Path .cache\patina-qemu\armvirt.zip -DestinationPath "$env:FW_DIR" -Force
 
       - name: Setup and Build patina-dxe-core-qemu
-        uses: Javagedes/patina-devops/.github/actions/setup-patina-qemu-validation@44ee888d85f3c5ed8cedde89346fcd1161aec1c1
+        uses: OpenDevicePartnership/patina-devops/.github/actions/setup-patina-qemu-validation@main
         with:
           deps-dir: ${{ env.DEPS_DIR }}
           dxe-core-qemu-ref: ${{ needs.preflight.outputs.dxe_core_qemu_sha }}
@@ -893,7 +893,7 @@ jobs:
       #    - See: https://github.com/OpenDevicePartnership/patina-qemu/issues/188
       - name: Run QEMU Validation - Q35 (Windows)
         if: false
-        uses: Javagedes/patina-devops/.github/actions/run-patina-qemu-validation@44ee888d85f3c5ed8cedde89346fcd1161aec1c1
+        uses: OpenDevicePartnership/patina-devops/.github/actions/run-patina-qemu-validation@main
         with:
           fw-patch-repo: ${{ env.FW_PATCHER_REPO }}
           log-file: ${{ env.LOG_DIR }}/q35-windows.log
