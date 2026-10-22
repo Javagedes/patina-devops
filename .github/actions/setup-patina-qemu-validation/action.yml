@@ -68,7 +68,7 @@ runs:
         fi
 
     - name: Install QEMU Rust Tools
-      uses: OpenDevicePartnership/patina-devops/.github/actions/rust-tool-cache@main
+      uses: Javagedes/patina-devops/.github/actions/rust-tool-cache@7faf6df90ed5510185e1fce0b15a25788e58ff2a
       with:
         rust-toolchain-file: ${{ inputs.dxe-core-qemu-repo }}/rust-toolchain.toml
 
