@@ -259,7 +259,9 @@ jobs:
               let delta = 'N/A';
               if (baseBytes !== null && prBytes !== null) {
                 const difference = prBytes - baseBytes;
-                delta = `${difference > 0 ? '+' : ''}${prettySize(difference)}`;
+                delta = Math.abs(difference) <= 256
+                  ? prettySize(0)
+                  : `${difference > 0 ? '+' : ''}${prettySize(difference)}`;
               }
               return `\`${prettySize(baseBytes)}\`<br>` +
                 `\`${prettySize(prBytes)}\`<br>**\`\u0394\u00a0${delta}\`**`;
@@ -288,6 +290,7 @@ jobs:
               ...rows,
               '',
               'Compressed sizes use LZMA-alone format at preset 6 (`xz --format=lzma -6`).',
+              'Deltas of 256 bytes or less are shown as zero to ignore build noise from timestamps and similar metadata.',
               ...(mode === 'patina' ? [
                 '',
                 `Shared QEMU integration: ${commit('OpenDevicePartnership/patina-dxe-core-qemu', comparison.integration_sha)}.`,
