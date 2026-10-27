@@ -283,7 +283,7 @@ jobs:
             core.exportVariable('BUILD_SIZE_SECTION', [
               '### Binary Size Report',
               '',
-              '| Platform | Commit | \u0394 Debug Size | \u0394 Release Size | \u0394 Debug Size (Compressed) | \u0394 Release Size (Compressed) |',
+              '| Platform | Commit | \u0394 Debug Size | \u0394 Release Size | \u0394 Debug Size (LZMA) | \u0394 Release Size (LZMA) |',
               '|:---------|:-------|:---------------|:-----------------|:----------------------------|:------------------------------|',
               ...rows,
               '',
